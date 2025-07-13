@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  username     String
+  provider     String
+  password     String?
+  avatar       String
+  rooms        Room[]         @relation("AdminRooms")       // Rooms created by this user (admin)
+  joinedRooms  JoinedRooms[]
+}
+
+model Room {
+  id           String         @id @unique          // You forgot a default value for id
+  name         String         @unique
+  createdAt    DateTime       @default(now())
+  code         String
+  adminId      String
+  admin        User           @relation("AdminRooms", fields: [adminId], references: [id])
+  joinedRooms  JoinedRooms[]
+}
+
+model JoinedRooms {
+  id         String             @id @default(uuid())
+  userId     String
+  roomId     String          // Changed to String to match Room's id
+  joinedAt   DateTime        @default(now())
+  user       User            @relation(fields: [userId], references: [id])
+  room       Room            @relation(fields: [roomId], references: [id])
+  @@unique([userId, roomId])
+}
+
+model VerificationEmail {
+  id         String             @id @default(uuid())
+  email      String          @unique
+  code       String
+  expireAt   DateTime
+} 
+
