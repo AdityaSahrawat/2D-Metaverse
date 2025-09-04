@@ -14,12 +14,18 @@ const Auth = () => {
 
 
   const handleAuthSuccess = () => {
-    router.push("/rooms");
+    console.log("req came")
+    router.push("/");
   };
 
   const handleGoogleAuth = async() => {
     signIn("google" , {callbackUrl : "/auth/post-oauth"});
   };
+
+  const handleHomeRedirect = () => {
+    router.push("/");
+  };
+
   useEffect(() => {
     if (session?.backendToken) router.replace("/rooms");
   }, [session, router]);
@@ -40,6 +46,15 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Home Button */}
+          <Button 
+            onClick={handleHomeRedirect}
+            variant="ghost" 
+            className="w-full"
+          >
+            Go Back Home
+          </Button>
+
           {/* Google OAuth Button */}
           <Button 
             onClick={handleGoogleAuth}

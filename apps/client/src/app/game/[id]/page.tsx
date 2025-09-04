@@ -1,24 +1,103 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { initGameScene } from './gameScene';
+import axios from 'axios';
+import { Space } from '@repo/valid';
 
 export default function GameRoomPage() {
+  const { id } = useParams(); // ✅ get route param
+  const [space, setSpace] = useState<Space>();
+  const [role, setRole] = useState<"admin" | "member">();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const pixiContainerRef = useRef<HTMLDivElement>(null);
-  const { id } = useParams(); // get /game/:id
+  const api = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const router = useRouter();
+
+  const checkUserAuth = async () => {
+    try {
+      const res = await axios.get(`${api}/v1/user/auth/status`, {
+        withCredentials: true,
+      });
+      if (!res.data.isAuth) {
+        router.push('/rooms');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error(err);
+      setError("Error checking authentication");
+      return false;
+    }
+  };
+
+  const fetchSpaceData = async () => {
+    try {
+      const res = await axios.get(`${api}/v1/web/space/${id}/access`, {
+        withCredentials: true,
+      });
+      setSpace(res.data.space);
+      setRole(res.data.role);
+      return true;
+    } catch (err) {
+      console.error(err);
+      setError("Error fetching space data");
+      return false;
+    }
+  };
 
   useEffect(() => {
-    if (!id || !pixiContainerRef.current) return;
+    if (!id) return;
 
-    // Init Pixi + scene  
-    initGameScene(pixiContainerRef.current , id as string);
+    const init = async () => {
+      setIsLoading(true);
+      setError(null);
 
-    // Cleanup on unmount
+      const isAuth = await checkUserAuth();
+      if (!isAuth) return;
+      const hasSpaceAccess = await fetchSpaceData();
+      if (!hasSpaceAccess) return;
+      setIsLoading(false);
+    };
+
+    init();
+
     return () => {
-      // destroyGameScene(); // Optional: cleanup logic
+      // destroyGameScene(); // optional cleanup
     };
   }, [id]);
+
+  useEffect(() => {
+  if (pixiContainerRef.current && space && role) {
+    console.log("🎮 Initializing game scene...");
+
+    // ws
+    
+    initGameScene(pixiContainerRef.current, space, role);
+  }
+}, [space, role]);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-red-50">
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-red-300">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-black">

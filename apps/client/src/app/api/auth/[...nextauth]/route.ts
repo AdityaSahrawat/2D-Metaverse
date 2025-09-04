@@ -1,13 +1,13 @@
 // /api/auth/[nextauth]
-import axios from "axios";
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-
+const client_id = process.env.NEXT_PUBLIC_CLIENTID
+const client_secret = process.env.NEXT_PUBLIC_CLIENT_SECRET
 const handler = NextAuth({
   providers: [
     GoogleProvider({
-      clientId: "896328445587-2nmm5ihs57k2a8s3j37f3r29p1jsgamq.apps.googleusercontent.com",
-      clientSecret: "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",
+      clientId: client_id!,
+      clientSecret: client_secret!,
     }),
   ],
   secret: "123",

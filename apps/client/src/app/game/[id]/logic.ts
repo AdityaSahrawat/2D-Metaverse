@@ -1,8 +1,8 @@
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { Application, Assets, Container, Rectangle, Sprite, Texture } from "pixi.js";
 import { MapObject, TiledMap ,  } from "@repo/valid"
 
 
-export async function loadMap(map : TiledMap , app:Application){
+export async function loadMap(map : TiledMap , app:Application, container?: Container){
     const tilesetsWithTextures = await Promise.all(
       map.tilesets.map(async (set) => {
         const imagePath = `/assets/tilesets/${set.image.split('/').pop()}`;
@@ -63,7 +63,7 @@ export async function loadMap(map : TiledMap , app:Application){
 
       mapContainer.addChild(layerContainer);
     }
-    app.stage.addChild(mapContainer);
+    (container || app.stage).addChild(mapContainer);
 
 
       const borders = new Container();
@@ -72,23 +72,49 @@ export async function loadMap(map : TiledMap , app:Application){
     if (layer.type !== "objectgroup" || !layer.visible) continue;
 
     for (const obj of layer.objects) {
-      const { x = 0, y = 0, width = 0, height = 0 } = obj;
       if (obj.width === 0 || obj.height === 0) continue;
 
-      const g = new Graphics();
-      g.rect(x , y , width , height).stroke({                                // <-- v8 stroke options
-         width: 2,
-         color: 0xff0000,
-         alpha: 1,
-         alignment: 0,                          // center the 2‑px outline
-       });
-                             // optional: keep on top
-        borders.addChild(g);
+      // const g = new Graphics();
+      // g.rect(x , y , width , height).stroke({                                // <-- v8 stroke options
+      //    width: 2,
+      //    color: 0xff0000,
+      //    alpha: 1,
+      //    alignment: 0,                          // center the 2‑px outline
+      //  });
+      //                        // optional: keep on top
+      //   borders.addChild(g);
     }
   }
    borders.sortableChildren = true;
 
-  app.stage.addChild(borders);
+  (container || app.stage).addChild(borders);
+}
+
+
+export function loadPlaceObjects(mapObjects: MapObject[], app: Application) {
+  const placeObjs = mapObjects.filter(obj => obj.type === "interactive"  );
+
+  for (const obj of placeObjs) {
+    const texturePath =
+      obj.properties?.state === "open"
+        ? "/assets/objects/door_open.png"
+        : "/assets/objects/door_closed.png";
+
+    const texture = Texture.from(texturePath);
+    const sprite = new Sprite({ texture });
+
+    sprite.x = obj.x;
+    sprite.y = obj.y;
+    sprite.width = obj.width
+    sprite.height = obj.height
+
+    app.stage.addChild(sprite);
+
+    // doors[obj.properties.obj_id] = {
+    //   sprite,
+    //   state: obj.properties.state as "open" | "closed",
+    // };
+  }
 }
 
 export function extractMapObjects(tmj: TiledMap): MapObject[] {
@@ -115,6 +141,7 @@ export function extractMapObjects(tmj: TiledMap): MapObject[] {
         height: obj.height,
         rotation: obj.rotation ?? 0,
         properties: {
+          obj_id : propMap.obj_id,
           walkable: propMap.walkable,
           obstructsMovement: propMap.obstructsMovement,
           interactable: propMap.interactable,
@@ -128,55 +155,4 @@ export function extractMapObjects(tmj: TiledMap): MapObject[] {
   }
 
   return mapObjects;
-}
-
-export async function collisionRects(mapObjects : MapObject[]){
-
-  const collisionRects = mapObjects
-  .filter(obj => obj.properties?.obstructsMovement)
-  .map(obj => ({
-    x: obj.x,
-    y: obj.y,
-    width: obj.width ?? 0,
-    height: obj.height ?? 0,
-  }));
-  return collisionRects
-
-}
-const playerHitboxDebug = new Graphics();
-export function isColliding(app : Application , x: number, y: number, width: number, height: number , collisionRectangles : {x : number , y : number , width : number , height : number}[]): boolean {  
-  const hitbox = {
-    x,
-    y : y + 16,
-    width,
-    height : height-16,
-  };
-  // 16 because height is 32px
-
-  if (!app.stage.children.includes(playerHitboxDebug)) {
-    app.stage.addChild(playerHitboxDebug);
-  }
-
-  // Draw red outline for player hitbox
-  playerHitboxDebug.clear();
-  playerHitboxDebug.rect(hitbox.x, hitbox.y, hitbox.width, hitbox.height).stroke({
-    width: 2,
-    color: 0xff0000,
-    alpha: 1,
-    alignment: 0,
-  });
-
-  for (const rect of collisionRectangles) {
-    const collide =
-      hitbox.x < rect.x + rect.width &&
-      hitbox.x + hitbox.width > rect.x &&
-      hitbox.y < rect.y + rect.height &&
-      hitbox.y + hitbox.height > rect.y;
-      
-    if (collide) {
-      console.log("Collision detected between:", {player: hitbox, object: rect});
-      return true;
-    }
-  }
-  return false;
 }

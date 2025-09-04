@@ -11,8 +11,8 @@ export interface TiledObject {
   type: string;
   x: number;
   y: number;
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
   rotation?: number;
   visible: boolean;
   properties?: TiledProperty[];
@@ -59,10 +59,11 @@ export interface TiledMap {
   tilesets: Tileset[];
 }
 
-export type MapObjectType = 'wall' | 'floor' | 'furniture' | 'decoration' | 'interactive';
+export type MapObjectType = 'wall' | 'floor' | 'furniture' | 'decoration' | 'interactive' | 'trigger' | 'spawn';
 
 export type ObjectVariant =
   | 'chair'
+  | 'door'
   | 'table'
   | 'sofa'
   | 'bookshelf'
@@ -75,19 +76,19 @@ export type ObjectVariant =
   | 'painting'
   | 'lamp'
   | 'carpet'
-  | string; // Allow fallback to custom variants
+  | string;
 
 export interface MapObject {
   id: string;
   type: MapObjectType;
-  variant: ObjectVariant;
+  variant?: ObjectVariant;
 
   x: number;
   y: number;
 
   // Optional metadata
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
   zIndex?: number;
   rotation?: number;
   texture?: string;
@@ -98,9 +99,24 @@ export interface MapObject {
     obstructsMovement?: boolean;
     interactable?: boolean;
     interactionType?: string;
+    obj_id : string
     [key: string]: any;
   };
 }
+
+export interface placeObj {
+  obj_id : string
+  x: number;
+  y: number;
+
+  width: number;
+  height: number;
+
+  direction : "front" | "back" | "left" | "right"
+  state : "close" | "open"
+  type : "interactive"
+}
+
 
 export interface player{
   id : string
@@ -111,4 +127,46 @@ export interface player{
   height : number
   speed: number;
   direction: 'front' | 'back' | 'left' | 'right';
+}
+
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  provider: string;
+  password?: string;
+  avatar: string;
+  Space: Space[];          // Created spaces
+  joinedSpaces: Space[];   // Spaces user has joined
+}
+
+export interface Maps {
+  id: string;
+  mapid : string
+  name: string;
+  createdAt: string; // ISO string; if using Date objects, use Date
+  mapPath: string;
+  imagePath: string;
+  width: number;
+  height: number;
+  Space?: Space; // Optional, one-to-one or one-to-many depending on actual use
+}
+
+export type Spacetype = "private" | "public" | "invite_only";
+
+export interface Space {
+  id: string;
+  name: string;
+  createAt: string; // ISO string
+  maxParticipants?: number;
+  type: Spacetype;
+
+  adminId: string;
+  admin: User;
+
+  mapId: string;
+  map: Maps;
+
+  participants: User[];
 }

@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken"
 import nodemailer from "nodemailer"; 
 // import { userSchema , signinSchema , roomSchema } from "@zod/index"
 const jwt_secret  = "123"
-const saltRound = process.env.SALTROUNDS || 5
+const saltRound = process.env.SALTROUNDS;
 
 
 const userRouter:Router = Router()
@@ -61,20 +61,15 @@ userRouter.post("/signup", async(req: Request, res: Response) => {
 });
 
 userRouter.post('/signin', async(req: Request, res : Response) => {
-    // const parseData = signinSchema.safeParse(req.body);
+    console.log("req came")
     const parseData = req.body
-    if (!parseData.success){
-        res.json({
-            message : "Incorrect Inputs"
-        })
-        return 
-    }
+    console.log(parseData)
 
     try{
         const user = await prismaClient.user.findFirst({
             where:{
-                email: parseData.data.email,
-                password : parseData.data.password
+                email: parseData.email,
+                password : parseData.password
             }
         })
         if(!user){
@@ -84,7 +79,7 @@ userRouter.post('/signin', async(req: Request, res : Response) => {
             return
         }
         const token = jwt.sign({email : user.email , userId :user.id },jwt_secret)
-
+        console.log("dvadvdv")
 
         res.cookie("token" , token , {
             httpOnly : true,
@@ -331,7 +326,7 @@ userRouter.get('/auth/status' , async (req : Request , res : Response)=>{
     }
 
     try{
-        const decoded = jwt.verify(token , jwt_secret);
+        jwt.verify(token , jwt_secret);
         res.status(200).json({
             isAuth : true
         })

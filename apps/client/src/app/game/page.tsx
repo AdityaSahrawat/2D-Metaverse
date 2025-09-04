@@ -10,3 +10,5 @@ const Index = ()=>{
         router.push('/rooms')
     },[])
 }
+
+export default Index

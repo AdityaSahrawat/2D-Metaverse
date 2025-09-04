@@ -20,29 +20,38 @@ model User {
   username     String
   provider     String
   password     String?
-  avatar       String
-  rooms        Room[]         @relation("AdminRooms")       // Rooms created by this user (admin)
-  joinedRooms  JoinedRooms[]
+  avatar       String         @default("bob")
+
+  Space        Space[]        @relation("CreatedSpaces")
+  joinedSpaces Space[]        @relation("JoinedSpaces")
 }
 
-model Room {
-  id           String         @id @unique          // You forgot a default value for id
+model Maps {
+  id           String         @id @default(uuid())
+  mapid        String         @unique          // You forgot a default value for id
   name         String         @unique
   createdAt    DateTime       @default(now())
-  code         String
-  adminId      String
-  admin        User           @relation("AdminRooms", fields: [adminId], references: [id])
-  joinedRooms  JoinedRooms[]
+  mapPath      String
+  imagePath    String
+  width        Int
+  height       Int
+  Space        Space?         @relation()
 }
 
-model JoinedRooms {
-  id         String             @id @default(uuid())
-  userId     String
-  roomId     String          // Changed to String to match Room's id
-  joinedAt   DateTime        @default(now())
-  user       User            @relation(fields: [userId], references: [id])
-  room       Room            @relation(fields: [roomId], references: [id])
-  @@unique([userId, roomId])
+model Space {
+  id              String     @id @default(cuid())
+  name            String
+  createAt        DateTime   @default(now())
+  maxParticipants Int?
+  type            Spacetype  @default(public)
+  code            String?
+  adminId         String
+  admin           User       @relation("CreatedSpaces", fields: [adminId], references: [id])
+  
+  map             Maps       @relation(fields: [mapId], references: [id])
+  mapId           String     @unique
+
+  participants    User[]     @relation("JoinedSpaces")
 }
 
 model VerificationEmail {
@@ -51,4 +60,10 @@ model VerificationEmail {
   code       String
   expireAt   DateTime
 } 
+
+enum Spacetype {
+    private
+    public 
+    invite_only 
+}
 

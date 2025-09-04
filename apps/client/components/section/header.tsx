@@ -10,12 +10,12 @@ const Header = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter()
-  const api = process.env.NEXT_PUBLIC_API_BASE_URL 
+  const api = process.env.NEXT_PUBLIC_API_BASE_URL
 
   useEffect(()=>{ 
     async function checkIsLoggedIn(){
       try{
-        const res = await axios.get(`${api}/user/auth/status` ,{
+        const res = await axios.get(`${api}/v1/user/auth/status` ,{
           withCredentials : true
         })
 
@@ -26,7 +26,6 @@ const Header = () => {
           setIsAuth(false)
           setIsLoading(false)
         }
-
 
       } catch (err) {
         setIsAuth(false);
@@ -43,7 +42,7 @@ const Header = () => {
 
   async function logout(){
     try {
-      const res = await axios.get(`${api}/v1/user/logout` ,{
+      await axios.get(`${api}/v1/user/logout` ,{
         withCredentials : true
       })
     }catch(e){
@@ -76,11 +75,11 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-8">
 
             { isAuth ? (
-              <Button onClick={()=>{logout()}} variant="outline" className="text-red-500 border-red-500 hover:bg-red-100 hover:text-red-700">
+              <Button onClick={()=>{logout()}} variant="outline" className="text-red-500 border-red-500 hover:bg-red-100 hover:text-red-700 hover:cursor-pointer">
                 Logout
               </Button>
             ) : (
-              <Button onClick={()=>router.push('/auth')} variant="default" className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={()=>router.push('/auth')} variant="default" className="bg-blue-600 hover:bg-blue-700 hover:cursor-pointer">
                 Signin
               </Button>
             )
@@ -90,7 +89,7 @@ const Header = () => {
             <a href="#how-it-works" className="text-slate-300 hover:text-white transition-colors">
               How It Works
             </a>
-            <Button onClick={()=>router.push('/room')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-all hover:scale-105">
+            <Button onClick={()=>router.push('/rooms')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-all hover:scale-105">
               Join Room
             </Button>
           </div>

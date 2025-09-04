@@ -1,3 +1,5 @@
+<!-- command : nvm use $(Get-Content .nvmrc) -->
+
 # Turborepo starter
 
 This Turborepo starter is maintained by the Turborepo core team.
