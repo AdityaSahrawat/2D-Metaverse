@@ -5,9 +5,10 @@ import {prismaClient} from "@repo/db"
 import jwt from "jsonwebtoken"
 import nodemailer from "nodemailer"; 
 // import { userSchema , signinSchema , roomSchema } from "@zod/index"
-const jwt_secret  = "123"
-const saltRound = process.env.SALTROUNDS;
-
+const jwt_secret  = process.env.JWT_SECRET!
+// const saltRound = process.env.SALTROUNDS;
+const mail_user = process.env.MAIL_USER
+const mail_pass = process.env.EMAIL_PASS
 
 const userRouter:Router = Router()
 
@@ -199,16 +200,15 @@ userRouter.post("/send-code" , async (req : Request , res : Response)=>{
                 data : {
                     email : email,
                     code : code,
-                    expireAt : new Date(Date.now() + (1000 * 60 * 10)) // 10 min
+                    expireAt : new Date(Date.now() + (1000 * 60 * 10))
                 }
             })
         }
-        // code to send code
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: 'v1codesender@gmail.com',
-                pass: 'welc dhux joam nyjw',
+                user: mail_user,
+                pass: mail_pass,
             },
         });
 

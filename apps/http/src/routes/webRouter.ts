@@ -77,8 +77,8 @@ webRouter.get('/spaces' ,UserMiddleware, async (req : Request , res : Response)=
                 adminId : userId
             },
             include: {
-                map: true,           // include the map details
-                participants: true   // include participants if needed
+                map: true,
+                participants: true   
             }
         })
         res.status(200).json({

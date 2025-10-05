@@ -36,3 +36,9 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Game maps (local development only)
+apps/client/public/assets/maps/map_1.tmj
+apps/client/public/assets/maps/map_3.tmj
+apps/http/src/map_1.tmj
+apps/http/src/map_3.tmj

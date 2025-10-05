@@ -149,31 +149,26 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   const MAP_WIDTH = map.width * map.tilewidth;
   const MAP_HEIGHT = map.height * map.tileheight;
 
-  // Movement flag — don't allow movement until spawn
   let isSpawned = false;
 
-  // Track currently pressed keys (for continuous movement)
+  
   const keysPressed = new Set<string>();
   
   // Movement timing
   let lastMoveTime = 0;
-  const MOVE_DELAY = 150; // milliseconds between moves when key is held
+  const MOVE_DELAY = 150; 
 
   const updateCamera = () => {
     if (!isSpawned) return;
     
-    // Apply zoom to world container
     worldContainer.scale.set(ZOOM_LEVEL);
     
-    // Calculate camera position to center player on screen (accounting for zoom)
     const centerX = app.screen.width / 2;
     const centerY = app.screen.height / 2;
     
-    // Calculate target world container position to center player
     const targetX = centerX - (playerSprite.x + playerSprite.width / 2) * ZOOM_LEVEL;
     const targetY = centerY - (playerSprite.y + playerSprite.height / 2) * ZOOM_LEVEL;
     
-    // Apply camera boundaries to prevent showing empty space outside the map
     const scaledMapWidth = MAP_WIDTH * ZOOM_LEVEL;
     const scaledMapHeight = MAP_HEIGHT * ZOOM_LEVEL;
     
@@ -204,7 +199,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
     worldContainer.y += (finalY - worldContainer.y) * lerpFactor;
   };
 
-  // Function to update trigger text position above player
   const updateTriggerPosition = () => {
     if (!isSpawned || !triggerBubble.visible) return;
     
@@ -213,7 +207,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
     triggerBubble.y = playerSprite.y - 30; // 30 pixels above player
   };
 
-  // Game loop for continuous movement
   const gameLoop = () => {
     const currentTime = Date.now();
     
@@ -223,7 +216,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       let moved = false;
       let newDirection = currentDirection;
 
-      // Check for movement keys - use consistent key handling
       if (keysPressed.has("arrowup") || keysPressed.has("w")) {
         newY -= TILE_SIZE;
         newDirection = "back";
@@ -243,7 +235,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       }
 
       if (moved) {
-        // Update animation if direction changed
         if (currentDirection !== newDirection) {
           console.log(`🏃 Changing direction from ${currentDirection} to ${newDirection}`);
           currentDirection = newDirection;
@@ -257,7 +248,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
         newY = Math.max(0, Math.min(MAP_HEIGHT - playerSprite.height, newY));
         
         console.log(
-          `🎮 Client requesting move from (${playerSprite.x}, ${playerSprite.y}) to (${newX}, ${newY})`
+          `Client requesting move from (${playerSprite.x}, ${playerSprite.y}) to (${newX}, ${newY})`
         );
         
         sendMove({
@@ -270,16 +261,13 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       }
     }
     
-    // Update camera position every frame for smooth movement
     updateCamera();
     
-    // Update trigger text position every frame (only if visible)
     updateTriggerPosition();
     
     requestAnimationFrame(gameLoop);
   };
 
-  // Start the game loop
   requestAnimationFrame(gameLoop);
 
   window.addEventListener("keydown", (e) => {
@@ -462,12 +450,12 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       case "show-trigger": {
         console.log("🎯 Trigger detected, showing interaction text" , "objId = " , msg.payload.obj_id);
         triggerBubble.visible = true;
-        updateTriggerPosition(); // Position it above the player immediately
+        updateTriggerPosition(); 
         break;
       }
 
       case "no-trigger": {
-        console.log("🚫 No trigger, hiding interaction text");
+        console.log("No trigger, hiding interaction text");
         triggerBubble.visible = false;
         break;
       }
@@ -475,7 +463,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   });
 
   return () => {
-    console.log("🧹 Cleaning up WebSocket connection");
+    console.log("Cleaning up WebSocket connection");
     disconnectWS();
   };
 };
