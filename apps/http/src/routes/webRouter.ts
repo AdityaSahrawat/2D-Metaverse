@@ -4,7 +4,7 @@ import { UserMiddleware } from "../middleware/userMiddleware";
 import redis from "@repo/redis/index";
 import {MapObject, ObjectLayer, placeObj, Space, TiledMap} from "@repo/valid"
 import path from "path";
-import fs from 'fs/promises';   
+import fs from 'fs/promises';
 
 const webRouter : Router = Router();
 
@@ -56,6 +56,7 @@ webRouter.post('/map' , async(req : Request , res : Response)=>{
 })
 
 webRouter.get('/maps' ,UserMiddleware, async (req : Request , res : Response)=>{
+    console.log("in get/map")
     try {
         const maps = await prismaClient.maps.findMany()
 
@@ -63,6 +64,7 @@ webRouter.get('/maps' ,UserMiddleware, async (req : Request , res : Response)=>{
             maps
         })
     }catch(e){
+        console.log("error in get /maps" , e )
         res.status(500).json({
             message : "not able to get all maps"
         })
@@ -70,6 +72,7 @@ webRouter.get('/maps' ,UserMiddleware, async (req : Request , res : Response)=>{
 })
  
 webRouter.get('/spaces' ,UserMiddleware, async (req : Request , res : Response)=>{
+    console.log("in get /spaces")
     const userId = req.userId
     try {
         const spaces = await prismaClient.space.findMany({
@@ -92,7 +95,7 @@ webRouter.get('/spaces' ,UserMiddleware, async (req : Request , res : Response)=
 })
 
 webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)=>{
-
+    console.log(1)
     const {name, maxParticipants ,type , mapId , mapid} = req.body
     const userId =req.userId
     if(!name || !mapId || !mapid){
@@ -107,16 +110,17 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
         })
         return
     }
-    if(!userId){
+    if(!userId){ 
         res.status(403).json({
             message : "missing userId"
         })
         return
     }
-    redis.connect()
+    // redis.connect()
+    console.log(2)
     try {
         await redis.set('test', 'test');
-    } catch (error) { 
+    } catch (error) {
         return res.status(500).json({ message: 'error in redis connection' });
     }
     let space : Awaited<ReturnType<typeof prismaClient.space.create>>;
@@ -131,11 +135,13 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
             }
         })
     } catch (error) {
+        console.log("error in prisma post/space : " , error)
         res.status(500).json({
             message : "error in creating a space" , error
         })
         return
     }
+    console.log(3)
 
     const mapPath  = path.join(__dirname , `../map_${mapid}.tmj`);
     const mapData = await fs.readFile(mapPath, 'utf-8');
@@ -151,7 +157,7 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
     if (!layer) {
       return res.status(500).json({ message: 'no object layer named "Object Layer place"' });
     }
-
+    console.log(4)
     const placeObjects: placeObj[] = [];
 
     for (const obj of layer.objects) {
@@ -159,11 +165,11 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
             continue;
         }
       const props = Object.fromEntries(obj.properties.map((p: any) => [p.name, p.value]));
-
+ 
       let state = props.state?.toLowerCase();
       if (state === 'closed') state = 'close';
       if (state === 'opened') state = 'open';
-
+ 
       const placeObj: placeObj = {
         obj_id: props['obj_id'],
         x: Math.floor(obj.x),
@@ -172,14 +178,20 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
         height: Math.floor(obj.height),
         direction: props.direction || 'front',
         state: state || 'close',
-        type: props.type || 'interactive'
+        type: props.type || 'interactive' 
       };
+      console.log(5)
       if (placeObj.obj_id) {
         await redis.set(`space:${space.id}:${placeObj.obj_id}`, JSON.stringify(placeObj));
-        // console.log("objfromat : " , `space:${space.id}:${placeObj.obj_id}`, JSON.stringify(placeObj))
+        console.log("objfromat : " , `space:${space.id}:${placeObj.obj_id}`, JSON.stringify(placeObj))
         placeObjects.push(placeObj);
       }
     }
+    res.status(200).json({
+        message: "Space created successfully",
+        spaceId: space.id,
+        placeObjects
+    });
 
 })
 
@@ -283,6 +295,13 @@ webRouter.get('/space/:spaceId/access' , UserMiddleware , async(req : Request , 
     }
 
 })
+
+webRouter.get('/test-log', (req, res) => {
+    console.log("========= TEST LOG WORKS =========");
+    process.stdout.write("STDOUT WORKS\n");
+    console.error("STDERR WORKS");
+    res.json({ message: "check terminal for logs" });
+});
 
 
 export default webRouter

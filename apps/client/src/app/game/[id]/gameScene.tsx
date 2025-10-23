@@ -2,15 +2,14 @@
 import { Application, Assets, Texture, Rectangle, AnimatedSprite, Container, Text, TextStyle, Graphics } from "pixi.js";
 import { Space, TiledMap } from "@repo/valid";
 import axios from "axios";
-import { loadMap } from "./logic";
+import { extractMapObjects, loadMap, loadPlaceObjects } from "./logic";
 import { connectWS, sendMove, disconnectWS } from "./wslogic";
 
 export const initGameScene = async (container: HTMLDivElement,space: Space,role: "admin" | "member") => {
   console.log("role:", role);
   const otherPlayers: Record<string, AnimatedSprite> = {};
 
-  // Camera system variables
-  let ZOOM_LEVEL = 2.5; // Zoom factor to make player appear larger
+  let ZOOM_LEVEL = 2.5; 
   const MIN_ZOOM = 1.0;
   const MAX_ZOOM = 4.0;
   const ZOOM_STEP = 0.25;
@@ -21,27 +20,25 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   container.innerHTML = "";
   container.appendChild(app.canvas);
 
-  // Create world container for camera system
   const worldContainer = new Container();
+  worldContainer.sortableChildren = true;
   app.stage.addChild(worldContainer);
 
-  // Create UI container for fixed UI elements (not affected by camera)
   const uiContainer = new Container();
   app.stage.addChild(uiContainer);
 
-  // Create trigger UI text - positioned relative to player (thought bubble style)
   const triggerBackground = new Graphics()
     .roundRect(-50, -15, 100, 30, 10)
     .fill(0x000000)
     .stroke({ width: 2, color: 0xFFFFFF });
   triggerBackground.alpha = 0.8;
-  triggerBackground.visible = false;
+  triggerBackground.visible = false
 
   const triggerText = new Text({
     text: "Press E to open/close",
     style: new TextStyle({
       fontFamily: "Arial",
-      fontSize: 12,
+      fontSize: 8,
       fill: 0xFFFFFF,
       align: "center"
     })
@@ -49,15 +46,13 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   triggerText.anchor.set(0.5);
   triggerText.visible = false;
   
-  // Create a container for the trigger bubble
   const triggerBubble = new Container();
   triggerBubble.addChild(triggerBackground);
   triggerBubble.addChild(triggerText);
   triggerBubble.visible = false;
-  // Note: Position will be updated relative to player in updateTriggerPosition function
-  worldContainer.addChild(triggerBubble); // Add to world container so it moves with camera
+  triggerBubble.zIndex = 10000
+  worldContainer.addChild(triggerBubble); 
 
-  // Create zoom indicator
   const zoomIndicator = new Text({
     text: `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`,
     style: new TextStyle({
@@ -72,7 +67,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   zoomIndicator.y = 10;
   uiContainer.addChild(zoomIndicator);
 
-  // Create controls hint
   const controlsHint = new Text({
     text: "Controls: WASD/Arrow Keys to move, +/- to zoom, E to interact",
     style: new TextStyle({
@@ -94,6 +88,11 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   );
 
   await loadMap(map, app, worldContainer);
+
+  const mapObjects = extractMapObjects(map)
+
+  await loadPlaceObjects(mapObjects , app , worldContainer)
+
 
   const showCharAnimation = async(charName : string)=>{
     const charNameCapitalized = charName.charAt(0).toUpperCase() + charName.slice(1);
@@ -136,15 +135,14 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
   const animations = await showCharAnimation("bob")
 
-  // Create animated sprite with idle front animation
   const playerSprite = new AnimatedSprite(animations.idle.front);
-  playerSprite.animationSpeed = 0.2; // Faster animation speed
-  playerSprite.loop = true; // Ensure animations loop
+  playerSprite.animationSpeed = 0.2;
+  playerSprite.loop = true; 
   playerSprite.play();
+   playerSprite.zIndex = 100;
 
   let currentDirection = "front";
 
-  // Tile constants
   const TILE_SIZE = 16;
   const MAP_WIDTH = map.width * map.tilewidth;
   const MAP_HEIGHT = map.height * map.tileheight;
@@ -154,7 +152,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   
   const keysPressed = new Set<string>();
   
-  // Movement timing
   let lastMoveTime = 0;
   const MOVE_DELAY = 150; 
 
@@ -202,9 +199,9 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   const updateTriggerPosition = () => {
     if (!isSpawned || !triggerBubble.visible) return;
     
-    // Position trigger bubble above player (like a thought bubble)
+    
     triggerBubble.x = playerSprite.x + playerSprite.width / 2;
-    triggerBubble.y = playerSprite.y - 30; // 30 pixels above player
+    triggerBubble.y = playerSprite.y - 30; 
   };
 
   const gameLoop = () => {
@@ -271,34 +268,27 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   requestAnimationFrame(gameLoop);
 
   window.addEventListener("keydown", (e) => {
-    if (!isSpawned) return; // 🚫 block until server spawn
+    if (!isSpawned) return; 
     
     const key = e.key.toLowerCase();
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", " ", "e", "+", "=", "-"].includes(key)) {
       e.preventDefault();
     }
 
-    // Handle zoom controls
     if (key === "+" || key === "=") {
       ZOOM_LEVEL = Math.min(MAX_ZOOM, ZOOM_LEVEL + ZOOM_STEP);
       console.log(`🔍 Zoom in: ${ZOOM_LEVEL}x`);
       zoomIndicator.text = `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`;
-      // Zoom change should be immediate, not smooth
     } else if (key === "-") {
       ZOOM_LEVEL = Math.max(MIN_ZOOM, ZOOM_LEVEL - ZOOM_STEP);
       console.log(`🔍 Zoom out: ${ZOOM_LEVEL}x`);
       zoomIndicator.text = `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`;
-      // Zoom change should be immediate, not smooth
     }
 
-    // Handle 'E' key for interaction
     if (key === "e" && triggerBubble.visible) {
       console.log("🔗 Player pressed E to interact");
-      // Add your interaction logic here
-      // You can emit a WebSocket message or handle the interaction locally
     }
 
-    // Add key to pressed set (for continuous movement)
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(key)) {
       keysPressed.add(key);
       console.log(`🎹 Key pressed: ${key}, Keys active:`, Array.from(keysPressed));
@@ -325,7 +315,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
     }
   });
 
-  connectWS("ws://localhost:3006", { spaceId: space.id }, (msg) => {
+  connectWS("ws://localhost:8081", { spaceId: space.id }, (msg) => {
     console.log("message of type:", msg.type);
     switch (msg.type) {
       case "space-joined": {
@@ -450,6 +440,8 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       case "show-trigger": {
         console.log("🎯 Trigger detected, showing interaction text" , "objId = " , msg.payload.obj_id);
         triggerBubble.visible = true;
+        triggerBackground.visible = true; // turn children on 
+        triggerText.visible = true;
         updateTriggerPosition(); 
         break;
       }
@@ -457,6 +449,8 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       case "no-trigger": {
         console.log("No trigger, hiding interaction text");
         triggerBubble.visible = false;
+        triggerBackground.visible = false; // turn children on
+        triggerText.visible = false;
         break;
       }
     }

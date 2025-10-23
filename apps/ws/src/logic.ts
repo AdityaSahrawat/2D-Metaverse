@@ -20,7 +20,7 @@ export function extractMapObjects(tmj: TiledMap): MapObject[] {
       const propMap: Record<string, any> = {};
       if (obj.properties) {
         for (const prop of obj.properties) {
-          propMap[prop.name] = prop.value;
+          propMap[prop.name] = prop.value; 
         }
       }
 

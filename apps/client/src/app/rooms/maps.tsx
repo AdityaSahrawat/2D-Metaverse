@@ -36,31 +36,31 @@ export const MapsComp = ({maps} : {maps : Maps[]} ) => {
   return (
     <div>
       <section>
-        <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+        <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2 text-white">
           <MapPin className="h-6 w-6" />
           Available Maps
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {maps &&
             maps.map((map) => (
-              <Card key={map.id} className="overflow-hidden">
+              <Card key={map.id} className="overflow-hidden bg-gray-900 border-gray-800">
                 <div className="aspect-video bg-muted">
                   <Image src={map.imagePath} alt={map.name} width={100} height={100} className="w-full h-full object-cover"/>
                 </div>
                 <CardHeader>
-                  <CardTitle>{map.name}</CardTitle>
+                  <CardTitle className="text-white">{map.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="space-y-2 text-sm text-gray-400">
                     <div className="flex justify-between">
                       <span>Dimensions:</span>
-                      <span>
+                      <span className="text-gray-200">
                         {map.width} × {map.height}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Created:</span>
-                      <span>
+                      <span className="text-gray-200">
                         {new Date(map.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -72,7 +72,7 @@ export const MapsComp = ({maps} : {maps : Maps[]} ) => {
                     >
                       <DialogTrigger asChild>
                         <div className="inline-block p-[2px] rounded-lg bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">
-                          <button className="bg-white text-black px-4 py-2 rounded-lg w-full h-full hover:cursor-pointer">
+                          <button className="bg-gray-900 text-white px-4 py-2 rounded-lg w-full h-full hover:cursor-pointer hover:bg-gray-800">
                             create Space
                           </button>
                         </div>

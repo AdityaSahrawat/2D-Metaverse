@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const Header = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter()
+  const pathName = usePathname()
   const api = process.env.NEXT_PUBLIC_API_BASE_URL
 
   useEffect(()=>{ 
@@ -69,7 +71,7 @@ const Header = () => {
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               <div className="w-4 h-4 border-2 border-white rounded-full border-dashed animate-spin"></div>
             </div>
-            <span className="text-xl font-bold text-white">MetaSpace</span>
+            <span onClick={()=>{pathName == "/" ? " ": router.push('/')}} className=" hover:cursor-pointer text-xl font-bold text-white">MetaSpace</span>
           </div>
           
           <div className="hidden md:flex items-center space-x-8">
@@ -86,9 +88,8 @@ const Header = () => {
               
             }
             
-            <a href="#how-it-works" className="text-slate-300 hover:text-white transition-colors">
-              How It Works
-            </a>
+            <Button onClick={()=> router.push('/how-it-works')} className="text-sm hover:bg-gray-800 hover:cursor-pointer">How It Works</Button>
+
             <Button onClick={()=>router.push('/rooms')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-all hover:scale-105">
               Join Room
             </Button>

@@ -7,7 +7,7 @@ import axios from 'axios';
 import { Space } from '@repo/valid';
 
 export default function GameRoomPage() {
-  const { id } = useParams(); // ✅ get route param
+  const { id } = useParams();
   const [space, setSpace] = useState<Space>();
   const [role, setRole] = useState<"admin" | "member">();
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +32,6 @@ export default function GameRoomPage() {
       return false;
     }
   };
-
   const fetchSpaceData = async () => {
     try {
       const res = await axios.get(`${api}/v1/web/space/${id}/access`, {
@@ -65,13 +64,13 @@ export default function GameRoomPage() {
     init();
 
     return () => {
-      // destroyGameScene(); // optional cleanup
+      // destroyGameScene(); // optional
     };
   }, [id]);
 
   useEffect(() => {
   if (pixiContainerRef.current && space && role) {
-    console.log("🎮 Initializing game scene...");
+    console.log("Initializing game scene...");
 
     // ws
     

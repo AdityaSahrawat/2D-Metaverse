@@ -91,24 +91,48 @@ export async function loadMap(map : TiledMap , app:Application, container?: Cont
 }
 
 
-export function loadPlaceObjects(mapObjects: MapObject[], app: Application) {
-  const placeObjs = mapObjects.filter(obj => obj.type === "interactive"  );
+export async function loadPlaceObjects(mapObjects: MapObject[], app: Application , container : Container) {
+  const placeObjs = mapObjects.filter((obj) => obj.type === "interactive");
+
+  // Preload required textures into Pixi Assets cache to avoid cache warnings
+  const neededTexturePaths = new Set<string>();
+  for (const obj of placeObjs) {
+    const isOpen = obj.properties?.state === "open";
+    neededTexturePaths.add(
+      isOpen ? "/assets/objects/door_open.png" : "/assets/objects/door_close.png"
+    );
+  }
+
+  if (neededTexturePaths.size > 0) {
+    await Assets.load(Array.from(neededTexturePaths));
+  }
 
   for (const obj of placeObjs) {
     const texturePath =
       obj.properties?.state === "open"
         ? "/assets/objects/door_open.png"
-        : "/assets/objects/door_closed.png";
+        : "/assets/objects/door_close.png";
 
-    const texture = Texture.from(texturePath);
+    // Retrieve from cache; if missing for some reason, fall back to Texture.from
+    let texture = Assets.get(texturePath) as Texture | undefined;
+    if (!texture) {
+      console.warn(
+        `[loadPlaceObjects] Texture not found in Assets cache for ${texturePath}, falling back to Texture.from.`
+      );
+      texture = Texture.from(texturePath);
+    }
+
     const sprite = new Sprite({ texture });
+
+    console.log("obj shown :", texturePath);
 
     sprite.x = obj.x;
     sprite.y = obj.y;
-    sprite.width = obj.width
-    sprite.height = obj.height
+    sprite.width = obj.width;
+    sprite.height = obj.height;
 
-    app.stage.addChild(sprite);
+    // app.stage.addChild(sprite);
+    container.addChild(sprite)
 
     // doors[obj.properties.obj_id] = {
     //   sprite,

@@ -100,19 +100,19 @@ const Index = () => {
 
   if (!authChecked || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-950 to-black">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-gray-950 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-4xl font-bold">Dashboard</h1>
+          <h1 className="text-4xl font-bold text-white">Dashboard</h1>
           <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">

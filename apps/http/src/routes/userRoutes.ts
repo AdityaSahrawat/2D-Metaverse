@@ -1,14 +1,21 @@
 
 import { Router, Request, Response } from "express";
-import {prismaClient} from "@repo/db"
+import {prismaClient} from "@repo/db";
 
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer"; 
 // import { userSchema , signinSchema , roomSchema } from "@zod/index"
-const jwt_secret  = process.env.JWT_SECRET!
+
+// Validate JWT secret at startup to avoid runtime errors
+const jwt_secret = process.env.JWT_SECRET;
+if (!jwt_secret) {
+    console.error("[http] JWT_SECRET is not set. Please define it in apps/http/.env");
+    throw new Error("JWT_SECRET environment variable is required");
+}
+
 // const saltRound = process.env.SALTROUNDS;
-const mail_user = process.env.MAIL_USER
-const mail_pass = process.env.EMAIL_PASS
+const mail_user = process.env.MAIL_USER;
+const mail_pass = process.env.EMAIL_PASS;
 
 const userRouter:Router = Router()
 
@@ -97,22 +104,23 @@ userRouter.post('/signin', async(req: Request, res : Response) => {
 })
 
 userRouter.post("/oauth", async(req: Request, res: Response) => {
+    console.log("1")
   const { email, username } = req.body;
   if (!email) {
     res.status(400).json({ message: "Missing or invalid data" });
     return
   }
-
+  console.log("2")
   try {
     const existingUser = await prismaClient.user.findUnique({ where: { email } });
-
+    console.log("exi user : " , existingUser)
     if(existingUser?.provider === "manual"){
         res.status(403).json({
             message : "A user allreday exists with this email ( manual way ) "
         })
         return
     }
-
+    console.log("3")
     let user;
 
     if (existingUser) {
@@ -126,9 +134,9 @@ userRouter.post("/oauth", async(req: Request, res: Response) => {
           provider: "google",
           avatar : "bob"
         },
-      });
-    }
-
+      });    
+    } 
+    console.log("4")
     const token = jwt.sign({ email: user.email, userId: user.id }, jwt_secret);
 
     res.cookie("token" , token , {

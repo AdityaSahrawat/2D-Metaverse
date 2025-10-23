@@ -6,25 +6,24 @@ import axios from "axios";
 
 export default function PostAuthPage() {
   const router = useRouter();
-
+  const API = process.env.NEXT_PUBLIC_API_BASE_URL
   useEffect(() => {
     const handleOAuth = async () => {
       const session = await getSession();
-
       if (session?.user?.email) {
-        await axios.post("http://localhost:3009/v1/user/oauth", {
+        await axios.post(`${API}/v1/user/oauth`, {
           email: session.user.email,
           username: session.user.name,
         }, {
           withCredentials: true,
         });
-
-        router.replace("/rooms"); 
+        router.replace("/");
       }
     };
+    
 
     handleOAuth();
   }, [router]);
 
-  return <p>Completing login...</p>;
+  return <p className="text-white">Completing login...</p>;
 }

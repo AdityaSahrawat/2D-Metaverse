@@ -5,16 +5,14 @@ import SignUpForm from "./signupform"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation";
-import { getSession, signIn, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
 
-
   const handleAuthSuccess = () => {
-    console.log("req came")
     router.push("/");
   };
 
@@ -30,15 +28,14 @@ const Auth = () => {
     if (session?.backendToken) router.replace("/rooms");
   }, [session, router]);
 
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
+    <div className="w-full flex items-center justify-center">
+      <Card className="w-full max-w-md bg-card/80 backdrop-blur border border-border/40 shadow-lg shadow-black/40">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-2xl font-bold tracking-tight">
             {isSignUp ? "Create Account" : "Welcome Back"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-muted-foreground">
             {isSignUp 
               ? "Sign up to get started with your account" 
               : "Sign in to your account to continue"
@@ -92,7 +89,7 @@ const Auth = () => {
           <div className="text-center">
             <button
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-blue-600 hover:text-blue-800 underline"
+              className="text-sm text-primary hover:underline"
             >
               {isSignUp 
                 ? "Already have an account? Sign in" 

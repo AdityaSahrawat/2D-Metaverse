@@ -28,14 +28,14 @@ model User {
 
 model Maps {
   id           String         @id @default(uuid())
-  mapid        String         @unique          // You forgot a default value for id
+  mapid        String         @unique         
   name         String         @unique
   createdAt    DateTime       @default(now())
   mapPath      String
   imagePath    String
   width        Int
   height       Int
-  Space        Space?         @relation()
+  Space        Space[]         @relation()
 }
 
 model Space {
@@ -49,7 +49,7 @@ model Space {
   admin           User       @relation("CreatedSpaces", fields: [adminId], references: [id])
   
   map             Maps       @relation(fields: [mapId], references: [id])
-  mapId           String     @unique
+  mapId           String     
 
   participants    User[]     @relation("JoinedSpaces")
 }

@@ -1,5 +1,5 @@
 import { WebSocketServer } from 'ws';
-import jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken" ;
 import dotenv from "dotenv"
 import {parse} from "cookie"
 import { User } from './user';
@@ -27,13 +27,13 @@ function checkUser(token: string): string | null {
 
 wss.on('connection', async function connection(ws , request) {
 
-    const cookieHeader = request.headers.cookie
+  const cookieHeader = request.headers.cookie
 
   if(!cookieHeader){
     ws.close(1008 , "no cookie header found");
     return;
   }
-  
+
   const cookies = parse(cookieHeader)
   const token = cookies.token;
 
@@ -42,7 +42,6 @@ wss.on('connection', async function connection(ws , request) {
 
   if (!userId) return ws.close(1000 , "userId not found");
 
-  // Create User instance when connection is established
   const user = new User(ws , userId)
   console.log(`User ${user.userId} connected`);
 

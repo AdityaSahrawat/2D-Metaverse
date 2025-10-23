@@ -17,8 +17,8 @@ const handler = NextAuth({
   },
 
  pages: {
-  signIn: "/auth", // 👈 this fixes it
-  error: "/auth",  // 👈 this handles errors (like cancel, popup closed)
+  signIn: "/auth",
+  error: "/auth",  
 },
 
 
