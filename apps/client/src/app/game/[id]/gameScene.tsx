@@ -3,7 +3,7 @@ import { Application, Assets, Texture, Rectangle, AnimatedSprite, Container, Tex
 import { Space, TiledMap } from "@repo/valid";
 import axios from "axios";
 import { extractMapObjects, loadMap, loadPlaceObjects } from "./logic";
-import { connectWS, sendMove, disconnectWS } from "./wslogic";
+import { connectWS, sendMove, disconnectWS, sendWS } from "./wslogic";
 
 export const initGameScene = async (container: HTMLDivElement,space: Space,role: "admin" | "member") => {
   console.log("role:", role);
@@ -15,7 +15,12 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   const ZOOM_STEP = 0.25;
 
   const app = new Application();
-  await app.init({ width: 1024, height: 768, backgroundColor: 0x2c2c2c });
+  await app.init({ 
+    width: window.innerWidth, 
+    height: window.innerHeight, 
+    backgroundColor: 0x2c2c2c,
+    resizeTo: window
+  });
 
   container.innerHTML = "";
   container.appendChild(app.canvas);
@@ -28,19 +33,20 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   app.stage.addChild(uiContainer);
 
   const triggerBackground = new Graphics()
-    .roundRect(-50, -15, 100, 30, 10)
+    .roundRect(-80, -20, 160, 40, 10)
     .fill(0x000000)
     .stroke({ width: 2, color: 0xFFFFFF });
   triggerBackground.alpha = 0.8;
   triggerBackground.visible = false
 
   const triggerText = new Text({
-    text: "Press E to open/close",
+    text: "Press E to interact",
     style: new TextStyle({
       fontFamily: "Arial",
-      fontSize: 8,
+      fontSize: 16,
       fill: 0xFFFFFF,
-      align: "center"
+      align: "center",
+      fontWeight: "bold"
     })
   });
   triggerText.anchor.set(0.5);
@@ -91,7 +97,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
   const mapObjects = extractMapObjects(map)
 
-  await loadPlaceObjects(mapObjects , app , worldContainer)
+  const objectSprites = await loadPlaceObjects(mapObjects , app , worldContainer)
 
 
   const showCharAnimation = async(charName : string)=>{
@@ -116,20 +122,40 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
     });
   };
 
+  // Load sit animation if available
+  let sitFrames = null;
+  try {
+    const sitTexture = await Assets.load(`/assets/char/${charName}/${charNameCapitalized}_sit3_16x16.png`);
+    sitFrames = Array.from({ length: 4 }, (_, i) => {
+      return new Texture({
+        source: sitTexture,
+        frame: new Rectangle(
+          i * frameWidth,
+          0,
+          frameWidth,
+          frameHeight
+        ),
+      });
+    });
+  } catch (e) {
+    console.log(`No sitting animation for ${charName}, will use idle instead`);
+  }
+
   return {
     run: {
-      left: makeFrames(0),
+      right: makeFrames(0),
       back: makeFrames(6),
-      right: makeFrames(12),
+      left: makeFrames(12),
       front: makeFrames(18),
     },
     idle: {
       // just pick the first frame of each direction
-      left: [makeFrames(0)[0]!],
+      right: [makeFrames(0)[0]!],
       back: [makeFrames(6)[0]!],
-      right: [makeFrames(12)[0]!],
+      left: [makeFrames(12)[0]!],
       front: [makeFrames(18)[0]!],
     },
+    sit: sitFrames || [makeFrames(18)[0]!], // Use front idle if no sit animation
   };
   }
 
@@ -139,7 +165,9 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   playerSprite.animationSpeed = 0.2;
   playerSprite.loop = true; 
   playerSprite.play();
-   playerSprite.zIndex = 100;
+  playerSprite.zIndex = 100;
+  
+  console.log("🎮 Player sprite created, waiting for space-joined message...");
 
   let currentDirection = "front";
 
@@ -169,31 +197,44 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
     const scaledMapWidth = MAP_WIDTH * ZOOM_LEVEL;
     const scaledMapHeight = MAP_HEIGHT * ZOOM_LEVEL;
     
-    const maxX = 0;
-    const minX = app.screen.width - scaledMapWidth;
-    const maxY = 0;
-    const minY = app.screen.height - scaledMapHeight;
+    // Calculate camera bounds to prevent showing blank space
+    const maxX = 0; // Right edge of map at left of screen
+    const minX = app.screen.width - scaledMapWidth; // Left edge of map at right of screen
+    const maxY = 0; // Bottom edge of map at top of screen
+    const minY = app.screen.height - scaledMapHeight; // Top edge of map at bottom of screen
     
     let finalX = targetX;
     let finalY = targetY;
     
-    // Only apply boundaries if scaled map is larger than screen
+    // Always clamp to prevent black space
     if (scaledMapWidth > app.screen.width) {
+      // Map is wider than screen - clamp to prevent blank space on sides
       finalX = Math.max(minX, Math.min(maxX, targetX));
     } else {
+      // Map is narrower than screen - center it
       finalX = (app.screen.width - scaledMapWidth) / 2;
     }
     
     if (scaledMapHeight > app.screen.height) {
+      // Map is taller than screen - clamp to prevent blank space on top/bottom
       finalY = Math.max(minY, Math.min(maxY, targetY));
     } else {
+      // Map is shorter than screen - center it
       finalY = (app.screen.height - scaledMapHeight) / 2;
     }
     
     // Smooth camera movement with proper interpolation
-    const lerpFactor = 0.15; // Slightly faster for more responsive feel
+    const lerpFactor = 0.15;
     worldContainer.x += (finalX - worldContainer.x) * lerpFactor;
     worldContainer.y += (finalY - worldContainer.y) * lerpFactor;
+    
+    // Hard clamp to ensure we never exceed bounds (failsafe)
+    if (scaledMapWidth > app.screen.width) {
+      worldContainer.x = Math.max(minX, Math.min(maxX, worldContainer.x));
+    }
+    if (scaledMapHeight > app.screen.height) {
+      worldContainer.y = Math.max(minY, Math.min(maxY, worldContainer.y));
+    }
   };
 
   const updateTriggerPosition = () => {
@@ -277,16 +318,22 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
     if (key === "+" || key === "=") {
       ZOOM_LEVEL = Math.min(MAX_ZOOM, ZOOM_LEVEL + ZOOM_STEP);
-      console.log(`🔍 Zoom in: ${ZOOM_LEVEL}x`);
+      console.log(`Zoom in: ${ZOOM_LEVEL}x`);
       zoomIndicator.text = `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`;
     } else if (key === "-") {
       ZOOM_LEVEL = Math.max(MIN_ZOOM, ZOOM_LEVEL - ZOOM_STEP);
-      console.log(`🔍 Zoom out: ${ZOOM_LEVEL}x`);
+      console.log(`Zoom out: ${ZOOM_LEVEL}x`);
       zoomIndicator.text = `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`;
     }
 
     if (key === "e" && triggerBubble.visible) {
-      console.log("🔗 Player pressed E to interact");
+      console.log("Player pressed E to interact");
+      sendWS({
+        type : "trigger-pressed" , 
+        payload : {
+          obj_id : currentTriggerObjId
+        }
+      })
     }
 
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(key)) {
@@ -294,20 +341,20 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       console.log(`🎹 Key pressed: ${key}, Keys active:`, Array.from(keysPressed));
     }
   });
+  
+  let currentTriggerObjId: string | null = null;
+  let isSitting = false;
 
   window.addEventListener("keyup", (e) => {
     const key = e.key.toLowerCase();
     
-    // Remove key from pressed set
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(key)) {
       keysPressed.delete(key);
       
-      // If no movement keys are pressed, return to idle animation
       const movementKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
       const stillMoving = movementKeys.some(k => keysPressed.has(k));
       
       if (!stillMoving && isSpawned) {
-        // Set to idle animation based on current direction
         console.log(`😴 Returning to idle animation for ${currentDirection}`);
         playerSprite.textures = animations.idle[currentDirection as keyof typeof animations.idle];
         playerSprite.play();
@@ -316,9 +363,10 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   });
 
   connectWS("ws://localhost:8081", { spaceId: space.id }, (msg) => {
-    console.log("message of type:", msg.type);
+    console.log("📨 WS message received - type:", msg.type);
     switch (msg.type) {
       case "space-joined": {
+        console.log("1111111111111111111111")
         console.log("✅ joined space", msg.payload);
         console.log(
           "📍 Spawn coordinates from server:",
@@ -326,31 +374,41 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
           msg.payload.self.tileY
         );
 
-        // Remove if already exists (rejoin scenario)
         if (worldContainer.children.includes(playerSprite)) {
+          console.log("⚠️ Player sprite already in world, removing first");
           worldContainer.removeChild(playerSprite);
         }
 
-        // Set to spawn
         playerSprite.x = msg.payload.self.tileX;
         playerSprite.y = msg.payload.self.tileY;
+        playerSprite.visible = true; // Ensure visible
+        playerSprite.alpha = 1.0; // Ensure fully opaque
         worldContainer.addChild(playerSprite);
+        
+        console.log("✅ Player sprite added to world at:", playerSprite.x, playerSprite.y);
+        console.log("🔍 Player sprite properties:", {
+          visible: playerSprite.visible,
+          alpha: playerSprite.alpha,
+          zIndex: playerSprite.zIndex,
+          width: playerSprite.width,
+          height: playerSprite.height,
+          worldContainerChildren: worldContainer.children.length
+        });
 
-        // Mark ready
         isSpawned = true;
+        
+        // Force immediate camera update
+        updateCamera();
         
         console.log(`📷 Map size: ${MAP_WIDTH}x${MAP_HEIGHT}, Screen size: ${app.screen.width}x${app.screen.height}`);
         console.log(`🔍 Zoom level: ${ZOOM_LEVEL}x, Scaled map: ${MAP_WIDTH * ZOOM_LEVEL}x${MAP_HEIGHT * ZOOM_LEVEL}`);
         console.log(`🎮 Player spawned at: (${playerSprite.x}, ${playerSprite.y})`);
+        console.log(`📐 World container position: (${worldContainer.x}, ${worldContainer.y}), scale: ${worldContainer.scale.x}`);
         
-        // Camera will start updating automatically via game loop
 
-        // Load correct character animations
         showCharAnimation(msg.payload.self.char).then((playerAnimations) => {
-          // Update the global animations variable for this character
           Object.assign(animations, playerAnimations);
           
-          // Update the sprite with the new character's animations
           playerSprite.textures = playerAnimations.idle.front;
           playerSprite.play();
           playerSprite.x = msg.payload.self.tileX;
@@ -362,7 +420,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
           );
         });
 
-        // Add existing players
         msg.payload.players.forEach((p) => {
           showCharAnimation(p.char).then((playerAnimations) => {
             const s = new AnimatedSprite(playerAnimations.idle.front);
@@ -414,8 +471,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
         );
         playerSprite.x = msg.payload.x;
         playerSprite.y = msg.payload.y;
-        // Camera updates automatically via game loop for smooth movement
-        updateTriggerPosition(); // Update trigger position after player moves
+        updateTriggerPosition();
         break;
       }
 
@@ -439,8 +495,19 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
       case "show-trigger": {
         console.log("🎯 Trigger detected, showing interaction text" , "objId = " , msg.payload.obj_id);
+        currentTriggerObjId = msg.payload.obj_id
+        
+        // Update trigger text based on object type
+        if (msg.payload.obj_id.startsWith("chair-")) {
+          triggerText.text = isSitting ? "Press E to stand up" : "Press E to sit";
+        } else if (msg.payload.obj_id.startsWith("door-")) {
+          triggerText.text = "Press E to open/close";
+        } else {
+          triggerText.text = "Press E to interact";
+        }
+        
         triggerBubble.visible = true;
-        triggerBackground.visible = true; // turn children on 
+        triggerBackground.visible = true;
         triggerText.visible = true;
         updateTriggerPosition(); 
         break;
@@ -448,9 +515,132 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
       case "no-trigger": {
         console.log("No trigger, hiding interaction text");
+        currentTriggerObjId = null
         triggerBubble.visible = false;
-        triggerBackground.visible = false; // turn children on
+        triggerBackground.visible = false;
         triggerText.visible = false;
+        break;
+      }
+
+      case "trigger-pressed-res": {
+        console.log("✅ Trigger interaction confirmed:", msg.payload.obj_id, "→", msg.payload.state);
+        
+        // Update door sprite texture
+        const sprite = objectSprites[msg.payload.obj_id];
+        if (sprite) {
+          const newTexturePath = msg.payload.state === "open" 
+            ? "/assets/objects/door_open.png" 
+            : "/assets/objects/door_close.png";
+          
+          sprite.texture = Texture.from(newTexturePath);
+          console.log("🚪 Updated door texture to:", newTexturePath);
+        } else {
+          console.warn("⚠️ Door sprite not found for obj_id:", msg.payload.obj_id);
+        }
+        break;
+      }
+
+      case "obj-state-changed": {
+        console.log("🔄 Object state changed - obj_id:", msg.payload.obj_id, "state:", msg.payload.state);
+        
+        // Update door sprite texture for other players
+        const sprite = objectSprites[msg.payload.obj_id];
+        if (sprite) {
+          const newTexturePath = msg.payload.state === "open" 
+            ? "/assets/objects/door_open.png" 
+            : "/assets/objects/door_close.png";
+          
+          sprite.texture = Texture.from(newTexturePath);
+          console.log("🚪 Updated door texture to:", newTexturePath);
+        }
+        break;
+      }
+
+      case "chair-action": {
+        console.log("🪑 Chair action:", msg.payload.action, "on", msg.payload.obj_id);
+        
+        if (msg.payload.action === "sit") {
+          isSitting = true;
+          
+          // Move player to chair position
+          if (msg.payload.x !== undefined && msg.payload.y !== undefined) {
+            playerSprite.x = msg.payload.x;
+            playerSprite.y = msg.payload.y;
+          }
+          
+          console.log("💺 You are now sitting at (", playerSprite.x, ",", playerSprite.y, "). Movement disabled.");
+          
+          // Play sitting animation
+          if (animations.sit) {
+            playerSprite.textures = animations.sit;
+            playerSprite.play();
+          }
+          
+          // Update trigger text if still on trigger
+          if (currentTriggerObjId === msg.payload.obj_id) {
+            triggerText.text = "Press E to stand up";
+          }
+        } else if (msg.payload.action === "stand") {
+          isSitting = false;
+          
+          // Move player to standing position
+          if (msg.payload.x !== undefined && msg.payload.y !== undefined) {
+            playerSprite.x = msg.payload.x;
+            playerSprite.y = msg.payload.y;
+          }
+          
+          console.log("🚶 You stood up at (", playerSprite.x, ",", playerSprite.y, "). Movement enabled.");
+          
+          // Return to idle animation
+          playerSprite.textures = animations.idle[currentDirection as keyof typeof animations.idle];
+          playerSprite.play();
+          
+          // Update trigger text if still on trigger
+          if (currentTriggerObjId === msg.payload.obj_id) {
+            triggerText.text = "Press E to sit";
+          }
+        }
+        break;
+      }
+
+      case "player-sat-down": {
+        console.log("🪑 Player", msg.payload.userId, "sat down on", msg.payload.obj_id);
+        const sittingPlayer = otherPlayers[msg.payload.userId];
+        if (sittingPlayer) {
+          // Move player to chair position
+          sittingPlayer.x = msg.payload.x;
+          sittingPlayer.y = msg.payload.y;
+          
+          // Load and play sitting animation for other player
+          showCharAnimation(msg.payload.char || "bob").then((playerAnimations) => {
+            if (playerAnimations.sit) {
+              sittingPlayer.textures = playerAnimations.sit;
+              sittingPlayer.play();
+            }
+          });
+        }
+        break;
+      }
+
+      case "player-stood-up": {
+        console.log("🚶 Player", msg.payload.userId, "stood up from", msg.payload.obj_id);
+        const standingPlayer = otherPlayers[msg.payload.userId];
+        if (standingPlayer) {
+          // Move player to standing position
+          standingPlayer.x = msg.payload.x;
+          standingPlayer.y = msg.payload.y;
+          
+          // Return to idle animation
+          showCharAnimation(msg.payload.char || "bob").then((playerAnimations) => {
+            standingPlayer.textures = playerAnimations.idle.front;
+            standingPlayer.play();
+          });
+        }
+        break;
+      }
+
+      case "error": {
+        console.error("❌ Server error:", msg.payload.message);
         break;
       }
     }

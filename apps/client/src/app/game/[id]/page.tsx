@@ -66,17 +66,28 @@ export default function GameRoomPage() {
     return () => {
       // destroyGameScene(); // optional
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
-  if (pixiContainerRef.current && space && role) {
-    console.log("Initializing game scene...");
+    let cleanup: (() => void) | null = null;
 
-    // ws
+    if (pixiContainerRef.current && space && role) {
+      console.log("Initializing game scene...");
+
+      initGameScene(pixiContainerRef.current, space, role).then((cleanupFn) => {
+        cleanup = cleanupFn;
+      });
+    }
     
-    initGameScene(pixiContainerRef.current, space, role);
-  }
-}, [space, role]);
+    // Cleanup function to prevent multiple connections
+    return () => {
+      if (cleanup) {
+        console.log("🧹 Cleaning up game scene (hot reload or unmount)");
+        cleanup();
+      }
+    };
+  }, [space, role]);
 
   if (error) {
     return (

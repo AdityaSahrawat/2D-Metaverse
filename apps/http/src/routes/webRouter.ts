@@ -95,9 +95,10 @@ webRouter.get('/spaces' ,UserMiddleware, async (req : Request , res : Response)=
 })
 
 webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)=>{
-    console.log(1)
+    console.log("📝 POST /space - Creating new space")
     const {name, maxParticipants ,type , mapId , mapid} = req.body
     const userId =req.userId
+    
     if(!name || !mapId || !mapid){
         res.status(403).json({
             message : "missing req fields"
@@ -116,13 +117,25 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
         })
         return
     }
-    // redis.connect()
-    console.log(2)
+
+    // Verify user exists in database
+    const user = await prismaClient.user.findUnique({
+        where: { id: userId }
+    });
+
+    if (!user) {
+        res.status(404).json({
+            message: "User not found. Please login again."
+        })
+        return;
+    }
+
     try {
         await redis.set('test', 'test');
     } catch (error) {
         return res.status(500).json({ message: 'error in redis connection' });
     }
+    console.log(3, "Creating space with userId:", userId, "mapId:", mapId)
     let space : Awaited<ReturnType<typeof prismaClient.space.create>>;
     try {
          space = await prismaClient.space.create({
@@ -131,17 +144,22 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
                 type,
                 adminId : userId,
                 mapId,
-                maxParticipants : parseInt(maxParticipants, 10) || 0
+                maxParticipants : parseInt(maxParticipants, 10) || 0,
+                participants: {
+                    connect: { id: userId } // Add creator as participant
+                }
             }
         })
+        console.log("✅ Space created successfully:", space.id)
     } catch (error) {
-        console.log("error in prisma post/space : " , error)
+        console.log("❌ error in prisma post/space : " , error)
+        console.log("Failed to create space with userId:", userId, "mapId:", mapId)
         res.status(500).json({
-            message : "error in creating a space" , error
+            message : "error in creating a space" , 
+            details: error instanceof Error ? error.message : "Unknown error"
         })
         return
     }
-    console.log(3)
 
     const mapPath  = path.join(__dirname , `../map_${mapid}.tmj`);
     const mapData = await fs.readFile(mapPath, 'utf-8');
@@ -157,7 +175,6 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
     if (!layer) {
       return res.status(500).json({ message: 'no object layer named "Object Layer place"' });
     }
-    console.log(4)
     const placeObjects: placeObj[] = [];
 
     for (const obj of layer.objects) {
@@ -180,7 +197,6 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
         state: state || 'close',
         type: props.type || 'interactive' 
       };
-      console.log(5)
       if (placeObj.obj_id) {
         await redis.set(`space:${space.id}:${placeObj.obj_id}`, JSON.stringify(placeObj));
         console.log("objfromat : " , `space:${space.id}:${placeObj.obj_id}`, JSON.stringify(placeObj))

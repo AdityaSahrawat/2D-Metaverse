@@ -48,7 +48,7 @@ export async function loadMap(map : TiledMap , app:Application, container?: Cont
 
           const sprite = new Sprite({ texture: tileTexture });
           sprite.x = col * map.tilewidth;
-          sprite.y = row * map.tileheight - (tileset.tileheight - map.tileheight);
+          sprite.y = row * map.tileheight;
 
           // no scaling at all
           sprite.zIndex = row; // to help with draw order
@@ -93,8 +93,8 @@ export async function loadMap(map : TiledMap , app:Application, container?: Cont
 
 export async function loadPlaceObjects(mapObjects: MapObject[], app: Application , container : Container) {
   const placeObjs = mapObjects.filter((obj) => obj.type === "interactive");
+  const objectSprites: Record<string, Sprite> = {};
 
-  // Preload required textures into Pixi Assets cache to avoid cache warnings
   const neededTexturePaths = new Set<string>();
   for (const obj of placeObjs) {
     const isOpen = obj.properties?.state === "open";
@@ -113,7 +113,6 @@ export async function loadPlaceObjects(mapObjects: MapObject[], app: Application
         ? "/assets/objects/door_open.png"
         : "/assets/objects/door_close.png";
 
-    // Retrieve from cache; if missing for some reason, fall back to Texture.from
     let texture = Assets.get(texturePath) as Texture | undefined;
     if (!texture) {
       console.warn(
@@ -131,14 +130,14 @@ export async function loadPlaceObjects(mapObjects: MapObject[], app: Application
     sprite.width = obj.width;
     sprite.height = obj.height;
 
-    // app.stage.addChild(sprite);
-    container.addChild(sprite)
-
-    // doors[obj.properties.obj_id] = {
-    //   sprite,
-    //   state: obj.properties.state as "open" | "closed",
-    // };
+    container.addChild(sprite);
+    
+    if (obj.properties?.obj_id) {
+      objectSprites[obj.properties.obj_id] = sprite;
+    }
   }
+  
+  return objectSprites;
 }
 
 export function extractMapObjects(tmj: TiledMap): MapObject[] {

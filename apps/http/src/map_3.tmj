@@ -750,7 +750,7 @@
                         {
                          "name":"type",
                          "type":"string",
-                         "value":"ineractive"
+                         "value":"interactive"
                         }],
                  "rotation":0,
                  "type":"",

@@ -1,16 +1,19 @@
-import { MapObject, TiledMap } from "@repo/valid";
+import { MapObject, placeObj, TiledMap } from "@repo/valid";
 import { User } from "./user";
-import { collisionRects, extractMapObjects, getPlaceObjs, getTriggerObjs } from "./logic";
+import { collisionRects, doorCollisionRects, extractMapObjects, getPlaceObjs, getTriggerObjs } from "./logic";
 import { prismaClient } from "@repo/db";
 import { getMapData } from "@repo/map/index";
+import redis from "@repo/redis/index";
 
 
 interface SpaceData {
     users: User[];
     mapid : string
-    mapObjects: MapObject[]; // from extractMapObjects
+    mapObjects: MapObject[]; 
     collisionRects: { x: number; y: number; width: number; height: number }[];
-    placeObjs : MapObject[]
+    doorCollisions: { x: number; y: number; width: number; height: number; obj_id: string }[];
+    doorStates: Map<string, placeObj>;
+    placeObjs : placeObj[]
     triggerObjs : MapObject[];
     meta: {
         width: number;
@@ -50,14 +53,26 @@ export class RoomManager {
 
         const mapObjects = extractMapObjects(map);
         const collisions = await collisionRects(mapObjects);
-        const placeObjs = getPlaceObjs(mapObjects)
+        const doors = await doorCollisionRects(mapObjects);
+        const placeObjs = await getPlaceObjs(mapObjects ,Number(spaceId) )
         const triggerObjs = getTriggerObjs(mapObjects)
+
+        // Build initial door state cache from Redis
+        const doorStates = new Map<string, placeObj>();
+        for (const door of doors) {
+            const raw = await redis.get(`space:${spaceId}:${door.obj_id}`);
+            if (raw) {
+                doorStates.set(door.obj_id, JSON.parse(raw));
+            }
+        }
 
         this.rooms.set(spaceId, {
             users: [],
             mapid : space?.map.mapid,
             mapObjects,
             collisionRects: collisions,
+            doorCollisions: doors,
+            doorStates: doorStates,
             placeObjs : placeObjs,
             triggerObjs : triggerObjs,
 
@@ -103,8 +118,19 @@ export class RoomManager {
         return this.rooms.get(spaceId)?.triggerObjs ?? [];
     }
 
+    public getSpaceData(spaceId: string): SpaceData | undefined {
+        return this.rooms.get(spaceId);
+    }
+
     public getMeta(spaceId: string) {
         return this.rooms.get(spaceId)?.meta;
+    }
+
+    public updateDoorState(spaceId: string, obj_id: string, newState: placeObj) {
+        const room = this.rooms.get(spaceId);
+        if (room) {
+            room.doorStates.set(obj_id, newState);
+        }
     }
 
     public broadcast(spaceId: string, message: any, excludeUser?: User) {

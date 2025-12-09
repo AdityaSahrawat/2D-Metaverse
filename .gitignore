@@ -42,3 +42,5 @@ apps/client/public/assets/maps/map_1.tmj
 apps/client/public/assets/maps/map_3.tmj
 apps/http/src/map_1.tmj
 apps/http/src/map_3.tmj
+apps/ws/src/map_1.tmj
+apps/ws/src/map_3.tmj
