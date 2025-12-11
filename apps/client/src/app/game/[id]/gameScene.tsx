@@ -167,7 +167,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   playerSprite.play();
   playerSprite.zIndex = 100;
   
-  console.log("🎮 Player sprite created, waiting for space-joined message...");
+  console.log("Player sprite created, waiting for space-joined message...");
 
   let currentDirection = "front";
 
@@ -274,11 +274,9 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
       if (moved) {
         if (currentDirection !== newDirection) {
-          console.log(`🏃 Changing direction from ${currentDirection} to ${newDirection}`);
           currentDirection = newDirection;
           playerSprite.textures = animations.run[currentDirection as keyof typeof animations.run];
           playerSprite.play();
-          console.log(`🎬 Playing run animation for ${currentDirection}`);
         }
 
         // Clamp to map boundaries
@@ -318,11 +316,9 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
     if (key === "+" || key === "=") {
       ZOOM_LEVEL = Math.min(MAX_ZOOM, ZOOM_LEVEL + ZOOM_STEP);
-      console.log(`Zoom in: ${ZOOM_LEVEL}x`);
       zoomIndicator.text = `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`;
     } else if (key === "-") {
       ZOOM_LEVEL = Math.max(MIN_ZOOM, ZOOM_LEVEL - ZOOM_STEP);
-      console.log(`Zoom out: ${ZOOM_LEVEL}x`);
       zoomIndicator.text = `Zoom: ${ZOOM_LEVEL.toFixed(1)}x`;
     }
 
@@ -338,7 +334,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
 
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(key)) {
       keysPressed.add(key);
-      console.log(`🎹 Key pressed: ${key}, Keys active:`, Array.from(keysPressed));
+      console.log(`Key pressed: ${key}, Keys active:`, Array.from(keysPressed));
     }
   });
   
@@ -355,7 +351,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       const stillMoving = movementKeys.some(k => keysPressed.has(k));
       
       if (!stillMoving && isSpawned) {
-        console.log(`😴 Returning to idle animation for ${currentDirection}`);
         playerSprite.textures = animations.idle[currentDirection as keyof typeof animations.idle];
         playerSprite.play();
       }
@@ -363,11 +358,11 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
   });
 
   connectWS("ws://localhost:8081", { spaceId: space.id }, (msg) => {
-    console.log("📨 WS message received - type:", msg.type);
+    console.log("WS message received - type:", msg.type);
     switch (msg.type) {
       case "space-joined": {
         console.log("1111111111111111111111")
-        console.log("✅ joined space", msg.payload);
+        console.log("joined space", msg.payload);
         console.log(
           "📍 Spawn coordinates from server:",
           msg.payload.self.tileX,
@@ -375,7 +370,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
         );
 
         if (worldContainer.children.includes(playerSprite)) {
-          console.log("⚠️ Player sprite already in world, removing first");
           worldContainer.removeChild(playerSprite);
         }
 
@@ -399,12 +393,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
         
         // Force immediate camera update
         updateCamera();
-        
-        console.log(`📷 Map size: ${MAP_WIDTH}x${MAP_HEIGHT}, Screen size: ${app.screen.width}x${app.screen.height}`);
-        console.log(`🔍 Zoom level: ${ZOOM_LEVEL}x, Scaled map: ${MAP_WIDTH * ZOOM_LEVEL}x${MAP_HEIGHT * ZOOM_LEVEL}`);
-        console.log(`🎮 Player spawned at: (${playerSprite.x}, ${playerSprite.y})`);
-        console.log(`📐 World container position: (${worldContainer.x}, ${worldContainer.y}), scale: ${worldContainer.scale.x}`);
-        
 
         showCharAnimation(msg.payload.self.char).then((playerAnimations) => {
           Object.assign(animations, playerAnimations);
@@ -414,10 +402,6 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
           playerSprite.x = msg.payload.self.tileX;
           playerSprite.y = msg.payload.self.tileY;
           
-          console.log(
-            `🎨 Character loaded at (${playerSprite.x}, ${playerSprite.y})`,
-            `Animations loaded:`, Object.keys(playerAnimations)
-          );
         });
 
         msg.payload.players.forEach((p) => {
@@ -456,7 +440,7 @@ export const initGameScene = async (container: HTMLDivElement,space: Space,role:
       }
 
       case "user-left": {
-        console.log("❌ user left", msg.payload.userId);
+        console.log("user left", msg.payload.userId);
         const leaving = otherPlayers[msg.payload.userId];
         if (leaving) {
           worldContainer.removeChild(leaving);

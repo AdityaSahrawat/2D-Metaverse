@@ -16,11 +16,6 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-app.get('/ping', (req, res) => {
-    console.log("PING RECEIVED");
-    res.json({ message: "pong" });
-});
-
 app.use("/v1/user" , userRouter)
 app.use("/v1/web" , webRouter )
 

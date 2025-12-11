@@ -57,7 +57,6 @@ export class RoomManager {
         const placeObjs = await getPlaceObjs(mapObjects ,Number(spaceId) )
         const triggerObjs = getTriggerObjs(mapObjects)
 
-        // Build initial door state cache from Redis
         const doorStates = new Map<string, placeObj>();
         for (const door of doors) {
             const raw = await redis.get(`space:${spaceId}:${door.obj_id}`);

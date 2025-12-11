@@ -95,7 +95,6 @@ webRouter.get('/spaces' ,UserMiddleware, async (req : Request , res : Response)=
 })
 
 webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)=>{
-    console.log("📝 POST /space - Creating new space")
     const {name, maxParticipants ,type , mapId , mapid} = req.body
     const userId =req.userId
     
@@ -146,13 +145,12 @@ webRouter.post('/space' , UserMiddleware , async(req : Request , res : Response)
                 mapId,
                 maxParticipants : parseInt(maxParticipants, 10) || 0,
                 participants: {
-                    connect: { id: userId } // Add creator as participant
+                    connect: { id: userId } 
                 }
             }
         })
-        console.log("✅ Space created successfully:", space.id)
     } catch (error) {
-        console.log("❌ error in prisma post/space : " , error)
+        console.log("error in prisma post/space : " , error)
         console.log("Failed to create space with userId:", userId, "mapId:", mapId)
         res.status(500).json({
             message : "error in creating a space" , 
@@ -311,13 +309,5 @@ webRouter.get('/space/:spaceId/access' , UserMiddleware , async(req : Request , 
     }
 
 })
-
-webRouter.get('/test-log', (req, res) => {
-    console.log("========= TEST LOG WORKS =========");
-    process.stdout.write("STDOUT WORKS\n");
-    console.error("STDERR WORKS");
-    res.json({ message: "check terminal for logs" });
-});
-
 
 export default webRouter

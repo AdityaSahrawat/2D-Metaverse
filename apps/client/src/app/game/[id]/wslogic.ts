@@ -30,8 +30,8 @@ export type ServerMsg =
 let ws: WebSocket | null = null;
 
 export const connectWS = (url: string,payload: { spaceId: string},onMessage: (msg: ServerMsg) => void) => {
-  console.log("🔌 Attempting to connect to WebSocket:", url);
-  console.log("📦 Join payload:", payload);
+  console.log("Attempting to connect to WebSocket:", url);
+  console.log("Join payload:", payload);
   
   ws = new WebSocket(url);
 
@@ -41,30 +41,30 @@ export const connectWS = (url: string,payload: { spaceId: string},onMessage: (ms
 
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(message);
-      console.log("📤 [WS] sent join request:", payload)
+      console.log("[WS] sent join request:", payload)
     } else {
       ws?.addEventListener("open", () => ws?.send(message), { once: true });
     }
   };
 
   ws.onmessage = (ev) => {
-    console.log("📩 [WS] Raw message received:", ev.data);
+    console.log("[WS] Raw message received:", ev.data);
     try {
       const data = JSON.parse(ev.data);
-      console.log("📨 [WS] Parsed message:", data);
+      console.log("[WS] Parsed message:", data);
       onMessage(data);
     } catch (err) {
-      console.error("❌ [WS] parse error:", err);
+      console.error("[WS] parse error:", err);
       console.error("[WS] Raw data that failed to parse:", ev.data);
     }
   };
 
   ws.onclose = (event) => {
-    console.log("❌ [WS] disconnected - Code:", event.code, "Reason:", event.reason);
+    console.log("[WS] disconnected - Code:", event.code, "Reason:", event.reason);
   };
 
   ws.onerror = (err) => {
-    console.error("❌ [WS] connection error:", err);
+    console.error("[WS] connection error:", err);
     console.error("Make sure the WS server is running on ws://localhost:8081");
   };
 };

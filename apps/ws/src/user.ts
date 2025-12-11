@@ -38,11 +38,11 @@ export class User {
     private Send(message: any) {
         if (this.ws.readyState === WebSocket.OPEN) {
             const stringified = JSON.stringify(message);
-            console.log("📤 [Server] Sending message:", message.type, "to user:", this.userId);
-            console.log("📦 [Server] Message payload:", stringified.substring(0, 200));
+            console.log("Sending message:", message.type, "to user:", this.userId);
+            console.log("Message payload:", stringified.substring(0, 200));
             this.ws.send(stringified);
         } else {
-            console.error("❌ [Server] WebSocket not open. ReadyState:", this.ws.readyState, "Message type:", message.type);
+            console.error(" WebSocket not open. ReadyState:", this.ws.readyState, "Message type:", message.type);
         }
     }
 
@@ -95,7 +95,7 @@ export class User {
     }
 
     private async handleJoin(payload: { spaceId: string }) {
-        console.log("🔵 Join request received for spaceId:", payload.spaceId, "from userId:", this.userId);
+        console.log("Join request received for spaceId:", payload.spaceId, "from userId:", this.userId);
         
         try {
         const space = await prismaClient.space.findFirst({
@@ -108,22 +108,20 @@ export class User {
         });
         
         if (!space) {
-            console.log("❌ Space not found:", payload.spaceId);
+            console.log("Space not found:", payload.spaceId);
             this.ws.close();
             return;
         }
-        console.log("✅ Space found:", space.name);
+        console.log("Space found:", space.name);
         
         const spaceData = await RoomManager.getInstance().initSpace(payload.spaceId)
         
         if (!spaceData) {
-            console.log("❌ Failed to init space data");
+            console.log("Failed to init space data");
             this.ws.close();
             return;
         }
-        console.log("✅ Space data initialized");
         
-        // Spawn point (tile-based)
         const spawnPoint = getSpawnPoint(spaceData.mapObjects);
         this.tileX = spawnPoint.x;
         this.tileY = spawnPoint.y;
@@ -142,13 +140,9 @@ export class User {
         // Check if user is admin or participant
         if(space.admin.id === this.userId){
             this.char = space.admin.avatar
-            console.log("👑 User is admin, avatar:", this.char);
         } else {
             const participant = space.participants.find((u) => u.id === this.userId)
             if(!participant){
-                console.log("❌ User not found in participants list. userId:", this.userId);
-                console.log("Available participants:", space.participants.map(p => p.id));
-                console.log("Admin ID:", space.admin.id);
                 this.Send({
                     type: "error",
                     payload: { message: "You are not a member of this space. Please join first." }
@@ -156,11 +150,9 @@ export class User {
                 return this.ws.close()
             }
             this.char = participant.avatar
-            console.log("👤 User is participant, avatar:", this.char);
         }
 
         RoomManager.getInstance().addUser(payload.spaceId, this);
-        console.log("✅ User added to room manager");
 
         this.Send({
             type: "space-joined",
@@ -183,7 +175,6 @@ export class User {
         });
         console.log("📤 Sent space-joined message to client");
 
-        // Broadcast to others that a new player joined
         RoomManager.getInstance().broadcast(payload.spaceId , {
             type: "user-joined",
             payload: {
@@ -195,9 +186,7 @@ export class User {
         }, this);
 
         this.joined = true;
-        console.log(`✅✅✅ User ${this.userId} successfully joined space ${payload.spaceId} ✅✅✅`);
         } catch (error) {
-            console.error("❌❌❌ Error in handleJoin:", error);
             console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
             this.Send({
                 type: "error",
@@ -259,7 +248,7 @@ export class User {
                     y : this.tileY
                 }
             })
-            console.log(`🚫 Movement blocked for user ${this.userId} - collision at (${payload.newX}, ${payload.newY}), staying at (${this.tileX}, ${this.tileY})`);
+            console.log(`Movement blocked for user ${this.userId} - collision at (${payload.newX}, ${payload.newY}), staying at (${this.tileX}, ${this.tileY})`);
             return
         }else{
             // Update server position
@@ -516,7 +505,6 @@ export class User {
             return result;
         }
 
-        console.log("📦 All Redis keys and values:");
         getAllKeysAndValues().then((data) => {
             console.log(JSON.stringify(data, null, 2)); 
         });

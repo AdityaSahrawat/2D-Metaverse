@@ -7,7 +7,7 @@ export function getSpawnPoint(mapObjects : MapObject[]){
     
     // If no spawn point found, return a default safe position
     if (!placeObjs.length || placeObjs[0]?.x === undefined || placeObjs[0]?.y === undefined) {
-        console.log("⚠️ No spawn point found in map, using default (100, 100)");
+        console.log("No spawn point found in map, using default (100, 100)");
         return {
             x: 100,
             y: 100
@@ -16,7 +16,7 @@ export function getSpawnPoint(mapObjects : MapObject[]){
     
     return {
         x : placeObjs[0].x,
-        y : placeObjs[0].y - (placeObjs[0].height ?? 0) // Convert from Tiled's bottom-origin to top-origin
+        y : placeObjs[0].y - (placeObjs[0].height ?? 0)
     }
 }
 
@@ -83,7 +83,7 @@ export async function doorCollisionRects(mapObjects : MapObject[]) : Promise<{x 
 )
   .map(obj => ({
     x: obj.x,
-    y: obj.y - (obj.height ?? 0), // Convert from Tiled's bottom-origin to top-origin
+    y: obj.y - (obj.height ?? 0),
     width: obj.width ?? 0,
     height: obj.height ?? 0,
     obj_id: obj.properties?.obj_id ?? ""
@@ -149,7 +149,7 @@ export function getTriggerObjs(mapObjects : MapObject[]){
     .filter(obj => obj.properties?.type === "trigger")
     .map(obj => ({
       ...obj,
-      y: obj.y - (obj.height ?? 0) // Convert from Tiled's bottom-origin to top-origin
+      y: obj.y - (obj.height ?? 0)
     }));
 }
 
@@ -185,7 +185,6 @@ export function findValidStandingPosition(
 ): {x: number, y: number} | null {
   const TILE_SIZE = 16;
   
-  // Try positions around the chair (top, bottom, left, right)
   const offsets = [
     { x: 0, y: -TILE_SIZE }, // top
     { x: 0, y: chairHeight + TILE_SIZE }, // bottom
@@ -201,19 +200,15 @@ export function findValidStandingPosition(
     const testX = chairX + offset.x;
     const testY = chairY + offset.y;
 
-    // Check if position is occupied by another player
     const isOccupied = occupiedPositions.some(
       pos => Math.abs(pos.x - testX) < TILE_SIZE && Math.abs(pos.y - testY) < TILE_SIZE
     );
     
     if (isOccupied) continue;
 
-    // Check if position has collision
     if (!isColliding(testX, testY, collisionRects)) {
       return { x: testX, y: testY };
     }
   }
-
-  // If no valid position found nearby, return a fallback
   return { x: chairX, y: chairY + chairHeight + TILE_SIZE };
 }
